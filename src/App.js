@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./bootstrap.min.css";
 import "./App.css";
+const removeAccents = require("remove-accents-diacritics");
 
 const App = () => {
-  const [cityLib, setCityLib] = useState([]);
+  const [cityLib, setCityLib] = useState(new Map());
   const [searchResult, setSearchResult] = useState({
     city: { name: "", id: -1, country: "" }
   });
@@ -17,14 +18,20 @@ const App = () => {
     try {
       let res = await fetch("/city.list.min.json");
       res = await res.json();
-      res = res.map(item => {
-        return {
+      let newMap = new Map();
+      res.forEach(item => {
+        let formattedKey = removeAccents.remove(item.name);
+        let formattedItem = {
           id: item.id,
-          name: item.name.toLowerCase(),
+          // name: item.name.toLowerCase(),
           country: item.country
         };
+        if (!newMap.get(formattedKey)) {
+          newMap.set(formattedKey, []);
+        }
+        newMap.get(formattedKey).push(formattedItem);
       });
-      setCityLib(res);
+      setCityLib(newMap);
       console.log("loaded lib");
     } catch (e) {
       console.error("Cannot load library: ", e);
@@ -94,9 +101,10 @@ const Search = ({ getCityForecast, setSearchCity }) => {
           searching ? "flex-column" : "flex-row align-items-center"
         }`}
       >
-        <a className="navbar-brand" href="/">
-          ForecastNow!
+        <a className="navbar-brand d-sm-none " href="/">
+          FcN!
         </a>
+        <span className="navbar-brand d-none d-sm-block">ForecastNow!</span>
         <form
           onSubmit={handleSubmit}
           className="form-inline flex-row flex-grow-1 my-2 my-lg-0"
@@ -126,27 +134,51 @@ const Search = ({ getCityForecast, setSearchCity }) => {
 };
 
 const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
-  // let suggestedCities = useRef();
+  const kelvinOffset = 273;
+  const suggestedCities = useRef();
 
   // useEffect(() => {
   //   if (searchCity.country) {
   //     console.log("country exists", searchCity.country);
   //     return;
   //   }
-  //   suggestedCities.current = cityLib.filter(
-  //     city =>
-  //       city.name.localeCompare(searchCity.city, "en", {
-  //         sensitivity: "base"
-  //       }) === 0
-  //   );
+  //   let suggestions = cityLib.get(searchCity.city);
+  //   console.log(suggestions ? `sugg tru ${suggestions}` : "sugg false");
+  //   if (suggestions) {
+  //     suggestedCities.current = suggestions.filter(
+  //       city =>
+  //         city.name.localeCompare(searchCity.city, "en", {
+  //           sensitivity: "base"
+  //         }) === 0
+  //     );
+  //   }
   // }, [cityLib, searchCity]);
 
-  return !isLoading ? (
+  useEffect(() => {}, [searchResult]);
+
+  return !isLoading && searchResult.city.name ? (
     <div className="d-flex flex-grow-1 align-items-center justify-content-center">
-      <section className="d-flex result-container ">
+      <section className="now-container d-flex flex-column">
         <p>
           {searchResult.city.name}, {searchResult.city.country}
         </p>
+        <div>
+          <img
+            src={`https://openweathermap.org/img/wn/${
+              searchResult.list[0].weather[0].icon
+            }@2x.png`}
+          />
+        </div>
+        <p>{searchResult.list[0].weather[0].description.toUpperCase()}</p>
+        <div>
+          <span className="text-info">
+            {(searchResult.list[0].main.temp_min | 0) - kelvinOffset} C
+          </span>
+          |
+          <span className="text-danger">
+            {(searchResult.list[0].main.temp_max | 0) - kelvinOffset} C
+          </span>
+        </div>
       </section>
       {/* {searchResult.city.name ? (
         <div className="suggested-similar d-flex flex-row">
