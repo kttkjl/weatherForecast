@@ -238,14 +238,27 @@ const getLocalDateTimeByOffset = (utcTime, offset) => {
   let d = new Date(utcTime * 1000);
   let utc = d.getTime() + d.getTimezoneOffset() * 60000;
   let nd = new Date(utc + offset * 1000);
+  let dayIdx = nd.getDay();
   let [date, time] = nd.toLocaleString().split(", ");
   time = time.replace(":00:00", "");
-  return { date: date, time: time };
+  return { date: date, time: time, dayIdx: dayIdx };
+};
+
+const dayStrings = {
+  0: "Sun",
+  1: "Mon",
+  2: "Tue",
+  3: "Wed",
+  4: "Thr",
+  5: "Fri",
+  6: "Sat"
 };
 
 const ForecastsContainer = ({ forecasts }) => {
   const [activeDay, setActiveDay] = useState(0);
   const [days, setDays] = useState([]);
+  const [activeTabIdx, setActiveTabIdx] = useState(0);
+
   useEffect(() => {}, [forecasts]);
 
   return (
