@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./bootstrap.min.css";
-import "./App.css";
-const removeAccents = require("remove-accents-diacritics");
+import "./App.scss";
+// const removeAccents = require("remove-accents-diacritics");
 
 const App = () => {
   const [cityLib, setCityLib] = useState(new Map());
@@ -14,29 +14,29 @@ const App = () => {
   });
   const [loading, setLoading] = useState(false);
 
-  const loadCityIdLibrary = async () => {
-    try {
-      let res = await fetch("/city.list.min.json");
-      res = await res.json();
-      let newMap = new Map();
-      res.forEach(item => {
-        let formattedKey = removeAccents.remove(item.name);
-        let formattedItem = {
-          id: item.id,
-          // name: item.name.toLowerCase(),
-          country: item.country
-        };
-        if (!newMap.get(formattedKey)) {
-          newMap.set(formattedKey, []);
-        }
-        newMap.get(formattedKey).push(formattedItem);
-      });
-      setCityLib(newMap);
-      console.log("loaded lib");
-    } catch (e) {
-      console.error("Cannot load library: ", e);
-    }
-  };
+  // const loadCityIdLibrary = async () => {
+  //   try {
+  //     let res = await fetch("/city.list.min.json");
+  //     res = await res.json();
+  //     let newMap = new Map();
+  //     res.forEach(item => {
+  //       let formattedKey = removeAccents.remove(item.name);
+  //       let formattedItem = {
+  //         id: item.id,
+  //         // name: item.name.toLowerCase(),
+  //         country: item.country
+  //       };
+  //       if (!newMap.get(formattedKey)) {
+  //         newMap.set(formattedKey, []);
+  //       }
+  //       newMap.get(formattedKey).push(formattedItem);
+  //     });
+  //     setCityLib(newMap);
+  //     console.log("loaded lib");
+  //   } catch (e) {
+  //     console.error("Cannot load library: ", e);
+  //   }
+  // };
 
   const getCityForecast = async (city, country) => {
     let res = {};
@@ -92,7 +92,7 @@ const Search = ({ getCityForecast, setSearchCity }) => {
     <nav
       className={`navbar navbar-expand-lg navbar-dark bg-primary`}
       style={{
-        minHeight: searching ? "100vh" : "50px",
+        minHeight: searching ? "100vh" : "25px",
         transition: "min-height 0.2s linear"
       }}
     >
@@ -101,19 +101,26 @@ const Search = ({ getCityForecast, setSearchCity }) => {
           searching ? "flex-column" : "flex-row align-items-center"
         }`}
       >
-        <a className="navbar-brand d-sm-none " href="/">
+        <a
+          className={`navbar-brand ${searching ? "d-none" : "d-sm-none"} `}
+          href="/"
+        >
           FcN!
         </a>
-        <span className="navbar-brand d-none d-sm-block">ForecastNow!</span>
+        <span
+          className={`navbar-brand  ${searching ? "" : "d-none d-sm-block"}`}
+        >
+          ForecastNao!
+        </span>
         <form
           onSubmit={handleSubmit}
-          className="form-inline flex-row flex-grow-1 my-2 my-lg-0"
+          className="container form-inline flex-row flex-grow-1 my-2 my-lg-0"
         >
           <input
             ref={inputRef}
             className="form-control col col-xs-auto d-inline-flex flex-grow-1 "
             type="text"
-            placeholder="City, Country (optional, eg. US)"
+            placeholder="City, Country (eg. ca)"
             onFocus={() => {
               setSearching(true);
             }}
@@ -135,7 +142,7 @@ const Search = ({ getCityForecast, setSearchCity }) => {
 
 const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
   const kelvinOffset = 273;
-  const suggestedCities = useRef();
+  // const suggestedCities = useRef();
 
   // useEffect(() => {
   //   if (searchCity.country) {
@@ -153,17 +160,35 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
   //     );
   //   }
   // }, [cityLib, searchCity]);
+  let [massagedFC, setMassagedFC] = useState([]);
 
-  useEffect(() => {}, [searchResult]);
+  useEffect(() => {
+    setMassagedFC(massageSearchResult(searchResult));
+  }, [searchResult]);
 
-  return !isLoading && searchResult.city.name ? (
-    <div className="d-flex flex-grow-1 align-items-center justify-content-center">
+  const massageSearchResult = searchResult => {
+    if (!searchResult.list) return [];
+    let arr = searchResult.list.map((item, idx) => {
+      return {
+        ...item,
+        localDateTime: getLocalDateTimeByOffset(
+          item.dt,
+          searchResult.city.timezone
+        )
+      };
+    });
+    return arr;
+  };
+
+  return !isLoading && searchResult.city && searchResult.city.name ? (
+    <div className="d-flex flex-grow-1 flex-column align-items-center justify-content-center">
       <section className="now-container d-flex flex-column">
         <p>
           {searchResult.city.name}, {searchResult.city.country}
         </p>
         <div>
           <img
+            alt={searchResult.list[0].weather[0].description}
             src={`https://openweathermap.org/img/wn/${
               searchResult.list[0].weather[0].icon
             }@2x.png`}
@@ -180,6 +205,9 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
           </span>
         </div>
       </section>
+      <br />
+      <p> Next 24 hours </p>
+      <ForecastsContainer forecasts={massagedFC} />
       {/* {searchResult.city.name ? (
         <div className="suggested-similar d-flex flex-row">
           {suggestedCities.current.length}
@@ -195,8 +223,83 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
       ) : null} */}
     </div>
   ) : (
-    <div>LOADING</div>
+    <div className="d-flex flex-grow-1 align-items-center justify-content-center">
+      NOTHING YET!
+    </div>
   );
 };
+
+/**
+ * Return the hour in the offset's timezone
+ * @param {seconds} utcTime
+ * @param {seconds} offset
+ */
+const getLocalDateTimeByOffset = (utcTime, offset) => {
+  let d = new Date(utcTime * 1000);
+  let utc = d.getTime() + d.getTimezoneOffset() * 60000;
+  let nd = new Date(utc + offset * 1000);
+  let [date, time] = nd.toLocaleString().split(", ");
+  time = time.replace(":00:00", "");
+  return { date: date, time: time };
+};
+
+const ForecastsContainer = ({ forecasts }) => {
+  const [activeDay, setActiveDay] = useState(0);
+  const [days, setDays] = useState([]);
+  useEffect(() => {}, [forecasts]);
+
+  return (
+    <section className="forecast-container d-flex">
+      {forecasts.map((item, idx) => {
+        if (idx > 8) return null;
+        return (
+          <div
+            className="forecast-item d-flex flex-column align-items-center px-1"
+            key={idx}
+          >
+            <img
+              alt={item.weather[0].main}
+              src={`https://openweathermap.org/img/wn/${
+                item.weather[0].icon
+              }.png`}
+            />
+            <div>{Math.round(item.main.temp) - 273} C</div>
+            <div>{item.weather[0].main}</div>
+            <div>{item.localDateTime.time}</div>
+          </div>
+        );
+      })}
+    </section>
+  );
+};
+
+ForecastsContainer.defaultProps = {
+  forecasts: [
+    {
+      dt: 0,
+      weather: [{ id: -1, main: "Stub", icon: "01n" }],
+      main: {
+        temp: 50,
+        temp_max: 100,
+        temp_min: -100
+      },
+      localDateTime: {
+        date: "",
+        time: ""
+      }
+    }
+  ]
+};
+
+// const NextDaysForecast = ({forecasts}) => {
+
+// }
+// NextDaysForecast.defaultProps = {
+//   forecasts: [
+//     "1970-01-01" : {
+
+//     }
+//   ]
+// };
 
 export default App;

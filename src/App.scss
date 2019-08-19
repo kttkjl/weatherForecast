@@ -6,3 +6,10 @@
   flex-direction: column;
 }
 
+.forecast {
+  &-container {
+    max-width: 80%;
+    overflow-x: auto;
+    // height: 5rem;
+  }
+}
