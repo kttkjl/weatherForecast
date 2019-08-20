@@ -9,6 +9,18 @@ const SearchResults = ({ searchResult, isLoading }) => {
     setMassagedFC(massageSearchResult(searchResult));
   }, [searchResult]);
 
+  /**
+   * Adds an object with info formatted to the city's timezone
+   * to the search results
+   *
+   * localDateTime : {
+   *    date: "1970-01-01",
+   *    time: "12 AM",
+   *    timeIdx: 0            // Index of weekday, sunday=0
+   * }
+   *
+   * @param {*} searchResult
+   */
   const massageSearchResult = searchResult => {
     if (!searchResult.list) return [];
     let arr = searchResult.list.map((item, idx) => {
@@ -53,7 +65,7 @@ const SearchResults = ({ searchResult, isLoading }) => {
     </div>
   ) : (
     <div className="d-flex flex-grow-1 align-items-center justify-content-center">
-      {searchResult.city ? "LOADING" : "NOTHING YET!"}
+      {searchResult.city ? "LOADING" : "NO CITY"}
     </div>
   );
 };
@@ -61,9 +73,14 @@ const SearchResults = ({ searchResult, isLoading }) => {
 export default SearchResults;
 
 const ForecastsContainer = ({ forecasts }) => {
-  const [activeDay, setActiveDay] = useState(0);
+  const [activeDay, setActiveDay] = useState("0");
   const [daysArr, setDaysArr] = useState([]);
 
+  /**
+   * Separates the forecast array into 5 sub arrays corresponding to a weekday
+   * The first subarray will be of 24 hours instead of by weekday
+   * @param {Array of forecast objects} forecasts
+   */
   const populateDaysArray = forecasts => {
     let arr = [];
     let firstTabIdx = forecasts[0].localDateTime.dayIdx;
@@ -167,27 +184,9 @@ const ForecastsContainer = ({ forecasts }) => {
     </section>
   );
 };
-ForecastsContainer.defaultProps = {
-  forecasts: [
-    {
-      dt: 0,
-      weather: [{ id: -1, main: "Stub", icon: "01n" }],
-      main: {
-        temp: 50,
-        temp_max: 100,
-        temp_min: -100
-      },
-      localDateTime: {
-        date: "",
-        time: "",
-        dayIdx: 0
-      }
-    }
-  ]
-};
 
 /**
- * Return the date, hour, day in the offset's timezone
+ * Return the { date, hour, weekday } in the offset's timezone
  * @param {seconds} utcTime
  * @param {seconds} offset
  */
