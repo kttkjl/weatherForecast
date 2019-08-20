@@ -50,6 +50,7 @@ const SearchResults = ({ searchResult, isLoading }) => {
           />
         </div>
         <p>{searchResult.list[0].weather[0].description.toUpperCase()}</p>
+        <div>{Math.round(searchResult.list[0].main.temp - kelvinOffset)} C</div>
         <div>
           <span className="text-info">
             {(searchResult.list[0].main.temp_min | 0) - kelvinOffset} C
