@@ -4,10 +4,8 @@ import "./App.scss";
 // const removeAccents = require("remove-accents-diacritics");
 
 const App = () => {
-  const [cityLib, setCityLib] = useState(new Map());
-  const [searchResult, setSearchResult] = useState({
-    city: { name: "", id: -1, country: "" }
-  });
+  // const [cityLib, setCityLib] = useState(new Map());
+  const [searchResult, setSearchResult] = useState({});
   const [searchCity, setSearchCity] = useState({
     city: "",
     country: ""
@@ -48,7 +46,6 @@ const App = () => {
     try {
       res = await fetch(url.concat(qparams));
       res = await res.json();
-      console.log(res);
       setSearchResult(res);
       setLoading(false);
     } catch (e) {
@@ -66,7 +63,7 @@ const App = () => {
     <div className="App">
       <Search getCityForecast={getCityForecast} setSearchCity={setSearchCity} />
       <SearchResults
-        cityLib={cityLib}
+        // cityLib={cityLib}
         searchResult={searchResult}
         isLoading={loading}
         searchCity={searchCity}
@@ -181,8 +178,8 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
   };
 
   return !isLoading && searchResult.city && searchResult.city.name ? (
-    <div className="d-flex flex-grow-1 flex-column align-items-center justify-content-center">
-      <section className="now-container d-flex flex-column">
+    <div className="d-flex flex-grow-1 flex-wrap align-content-center align-items-center justify-content-center">
+      <section className="now-container d-flex flex-column m-3">
         <p>
           {searchResult.city.name}, {searchResult.city.country}
         </p>
@@ -206,7 +203,6 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
         </div>
       </section>
       <br />
-      <p> Next 24 hours </p>
       <ForecastsContainer forecasts={massagedFC} />
       {/* {searchResult.city.name ? (
         <div className="suggested-similar d-flex flex-row">
@@ -224,7 +220,7 @@ const SearchResults = ({ cityLib, searchResult, isLoading, searchCity }) => {
     </div>
   ) : (
     <div className="d-flex flex-grow-1 align-items-center justify-content-center">
-      NOTHING YET!
+      {searchResult.city ? "LOADING" : "NOTHING YET!"}
     </div>
   );
 };
@@ -256,32 +252,108 @@ const dayStrings = {
 
 const ForecastsContainer = ({ forecasts }) => {
   const [activeDay, setActiveDay] = useState(0);
-  const [days, setDays] = useState([]);
-  const [activeTabIdx, setActiveTabIdx] = useState(0);
+  const [daysArr, setDaysArr] = useState([]);
 
-  useEffect(() => {}, [forecasts]);
+  const populateDaysArray = forecasts => {
+    let arr = [];
+    let firstTabIdx = forecasts[0].localDateTime.dayIdx;
+    let lastIdx = forecasts[0].localDateTime.dayIdx;
+    let firstCount = 8;
+    let newArr = [];
+    forecasts.forEach(item => {
+      if (item.localDateTime.dayIdx !== lastIdx) {
+        arr.push(newArr);
+        newArr = [];
+        lastIdx = item.localDateTime.dayIdx;
+      }
+      newArr.push(item);
+      if (firstCount > 0 && lastIdx !== firstTabIdx) arr[0].push(item);
+      firstCount--;
+    });
+    if (newArr.length === 8) arr.push(newArr);
+    return arr;
+  };
+
+  useEffect(() => {
+    setDaysArr(populateDaysArray(forecasts));
+  }, [forecasts]);
+
+  const handleDayClick = evt => {
+    setActiveDay(evt.currentTarget.getAttribute("value"));
+  };
 
   return (
-    <section className="forecast-container d-flex">
-      {forecasts.map((item, idx) => {
-        if (idx > 8) return null;
-        return (
-          <div
-            className="forecast-item d-flex flex-column align-items-center px-1"
-            key={idx}
+    <section className="d-flex flex-column align-items-center m-3">
+      <div className="forecast-container d-flex m-2">
+        {daysArr[activeDay] &&
+          daysArr[activeDay].map((item, idx) => {
+            return (
+              <div
+                className="forecast-item d-flex flex-column align-items-center px-2"
+                key={idx}
+              >
+                <img
+                  alt={item.weather[0].main}
+                  src={`https://openweathermap.org/img/wn/${
+                    item.weather[0].icon
+                  }.png`}
+                />
+                <div>{Math.round(item.main.temp) - 273} C</div>
+                <div>{item.weather[0].main}</div>
+                <div>{item.localDateTime.time}</div>
+              </div>
+            );
+          })}
+      </div>
+      {daysArr[0] && (
+        <div className="forecast-buttons d-flex justify-content-around btn-group m-2">
+          <button
+            onClick={handleDayClick}
+            className={`p-1 btn btn-primary ${
+              activeDay === "0" ? "active" : ""
+            }`}
+            value={0}
           >
-            <img
-              alt={item.weather[0].main}
-              src={`https://openweathermap.org/img/wn/${
-                item.weather[0].icon
-              }.png`}
-            />
-            <div>{Math.round(item.main.temp) - 273} C</div>
-            <div>{item.weather[0].main}</div>
-            <div>{item.localDateTime.time}</div>
-          </div>
-        );
-      })}
+            24H
+          </button>
+          <button
+            onClick={handleDayClick}
+            className={`p-1 btn btn-primary ${
+              activeDay === "1" ? "active" : ""
+            }`}
+            value={1}
+          >
+            {daysArr[1] && dayStrings[daysArr[1][0].localDateTime.dayIdx]}
+          </button>
+          <button
+            onClick={handleDayClick}
+            className={`p-1 btn btn-primary ${
+              activeDay === "2" ? "active" : ""
+            }`}
+            value={2}
+          >
+            {daysArr[2] && dayStrings[daysArr[2][0].localDateTime.dayIdx]}
+          </button>
+          <button
+            onClick={handleDayClick}
+            className={`p-1 btn btn-primary ${
+              activeDay === "3" ? "active" : ""
+            }`}
+            value={3}
+          >
+            {daysArr[3] && dayStrings[daysArr[3][0].localDateTime.dayIdx]}
+          </button>
+          <button
+            onClick={handleDayClick}
+            className={`p-1 btn btn-primary ${
+              activeDay === "4" ? "active" : ""
+            }`}
+            value={4}
+          >
+            {daysArr[4] && dayStrings[daysArr[4][0].localDateTime.dayIdx]}
+          </button>
+        </div>
+      )}
     </section>
   );
 };
@@ -303,16 +375,5 @@ ForecastsContainer.defaultProps = {
     }
   ]
 };
-
-// const NextDaysForecast = ({forecasts}) => {
-
-// }
-// NextDaysForecast.defaultProps = {
-//   forecasts: [
-//     "1970-01-01" : {
-
-//     }
-//   ]
-// };
 
 export default App;
