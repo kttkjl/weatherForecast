@@ -1,5 +1,6 @@
 {
   "name": "weatherforecast",
+  "homepage": "https://aws.koumakan.work/WeatherForecast",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
