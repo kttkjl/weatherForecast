@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import dayStrings from "../../Utils/dayStrings";
+import ForecastItem from "./ForecastItem";
+import ForecastsButton from "./ForecastsButton";
 
 const SearchResults = ({ searchResult, isLoading }) => {
   const kelvinOffset = 273;
@@ -44,9 +46,7 @@ const SearchResults = ({ searchResult, isLoading }) => {
         <div>
           <img
             alt={searchResult.list[0].weather[0].description}
-            src={`https://openweathermap.org/img/wn/${
-              searchResult.list[0].weather[0].icon
-            }@2x.png`}
+            src={`https://openweathermap.org/img/wn/${searchResult.list[0].weather[0].icon}@2x.png`}
           />
         </div>
         <p>{searchResult.list[0].weather[0].description.toUpperCase()}</p>
@@ -55,7 +55,7 @@ const SearchResults = ({ searchResult, isLoading }) => {
           <span className="text-info">
             {(searchResult.list[0].main.temp_min | 0) - kelvinOffset} C
           </span>
-          |
+          {` | `}
           <span className="text-danger">
             {(searchResult.list[0].main.temp_max | 0) - kelvinOffset} C
           </span>
@@ -74,7 +74,7 @@ const SearchResults = ({ searchResult, isLoading }) => {
 export default SearchResults;
 
 const ForecastsContainer = ({ forecasts }) => {
-  const [activeDay, setActiveDay] = useState("0");
+  const [activeDay, setActiveDay] = useState(0);
   const [daysArr, setDaysArr] = useState([]);
 
   /**
@@ -107,7 +107,8 @@ const ForecastsContainer = ({ forecasts }) => {
   }, [forecasts]);
 
   const handleDayClick = evt => {
-    setActiveDay(evt.currentTarget.getAttribute("value"));
+    // console.log(evt.currentTarget.getAttribute("value"));
+    setActiveDay(parseInt(evt.currentTarget.getAttribute("value")));
   };
 
   return (
@@ -116,70 +117,37 @@ const ForecastsContainer = ({ forecasts }) => {
         {daysArr[activeDay] &&
           daysArr[activeDay].map((item, idx) => {
             return (
-              <div
-                className="forecast-item d-flex flex-column align-items-center px-2"
-                key={idx}
-              >
-                <img
-                  alt={item.weather[0].main}
-                  src={`https://openweathermap.org/img/wn/${
-                    item.weather[0].icon
-                  }.png`}
-                />
-                <div>{Math.round(item.main.temp) - 273} C</div>
-                <div>{item.weather[0].main}</div>
-                <div>{item.localDateTime.time}</div>
-              </div>
+              <ForecastItem
+                weatherIcon={{
+                  alt: item.weather[0].main,
+                  url: `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`
+                }}
+                temperature={`${Math.round(item.main.temp) - 273} C`}
+                weather={item.weather[0].main}
+                time={item.localDateTime.time}
+                key={`fcItem-${idx}`}
+              />
             );
           })}
       </div>
       {daysArr[0] && (
         <div className="forecast-buttons d-flex justify-content-around btn-group m-2">
-          <button
-            onClick={handleDayClick}
-            className={`p-1 btn btn-primary ${
-              activeDay === "0" ? "active" : ""
-            }`}
-            value={0}
-          >
-            24H
-          </button>
-          <button
-            onClick={handleDayClick}
-            className={`p-1 btn btn-primary ${
-              activeDay === "1" ? "active" : ""
-            }`}
-            value={1}
-          >
-            {daysArr[1] && dayStrings[daysArr[1][0].localDateTime.dayIdx]}
-          </button>
-          <button
-            onClick={handleDayClick}
-            className={`p-1 btn btn-primary ${
-              activeDay === "2" ? "active" : ""
-            }`}
-            value={2}
-          >
-            {daysArr[2] && dayStrings[daysArr[2][0].localDateTime.dayIdx]}
-          </button>
-          <button
-            onClick={handleDayClick}
-            className={`p-1 btn btn-primary ${
-              activeDay === "3" ? "active" : ""
-            }`}
-            value={3}
-          >
-            {daysArr[3] && dayStrings[daysArr[3][0].localDateTime.dayIdx]}
-          </button>
-          <button
-            onClick={handleDayClick}
-            className={`p-1 btn btn-primary ${
-              activeDay === "4" ? "active" : ""
-            }`}
-            value={4}
-          >
-            {daysArr[4] && dayStrings[daysArr[4][0].localDateTime.dayIdx]}
-          </button>
+          {daysArr.map((day, idx) => {
+            return (
+              <ForecastsButton
+                handleClick={handleDayClick}
+                active={activeDay === idx}
+                value={idx}
+                buttonText={
+                  idx === 0
+                    ? "24H"
+                    : daysArr[idx] &&
+                      dayStrings[daysArr[idx][0].localDateTime.dayIdx]
+                }
+                key={`fcButton-${idx}`}
+              />
+            );
+          })}
         </div>
       )}
     </section>
@@ -196,7 +164,11 @@ const getLocalDateTimeByOffset = (utcTime, offset) => {
   let utc = d.getTime() + d.getTimezoneOffset() * 60000;
   let nd = new Date(utc + offset * 1000);
   let dayIdx = nd.getDay();
-  let [date, time] = nd.toLocaleString().split(", ");
-  time = time.replace(":00:00", "");
+  let dateOptions = {
+    hour12: false
+  };
+  let [date, time] = nd.toLocaleString(undefined, dateOptions).split(", ");
+
+  time = time.replace(":00", "");
   return { date: date, time: time, dayIdx: dayIdx };
 };
